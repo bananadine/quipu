@@ -1,0 +1,8 @@
+{
+  "files": [],
+  "references": [
+    { "path": "./modules/core" },
+    { "path": "./modules/api" },
+    { "path": "./modules/web" }
+  ]
+}

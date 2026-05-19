@@ -1,0 +1,28 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "lib": ["ES2022", "DOM"],
+    "strict": true,
+    "noUncheckedIndexedAccess": true,
+    "noImplicitOverride": true,
+    "exactOptionalPropertyTypes": false,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "resolveJsonModule": true,
+    "forceConsistentCasingInFileNames": true,
+    "declaration": true,
+    "composite": true,
+    "incremental": true,
+    "sourceMap": true,
+    "paths": {
+      "@quipu/core": ["./modules/core/src/index.ts"],
+      "@quipu/core/config": ["./modules/core/src/config/index.ts"],
+      "@quipu/core/logger": ["./modules/core/src/logger.ts"],
+      "@quipu/api": ["./modules/api/src/index.ts"],
+      "@quipu/web": ["./modules/web/src/index.ts"]
+    }
+  },
+  "exclude": ["**/node_modules", "**/dist", "**/test-results", "**/playwright-report"]
+}

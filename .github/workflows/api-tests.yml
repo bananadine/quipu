@@ -1,0 +1,71 @@
+name: API Tests
+
+# Triggers:
+#   • push/PR to main - every commit
+#   • manual dispatch - pick a region from the dropdown
+#   • nightly schedule - exercise all regions, catch upstream drift
+on:
+  push:
+    branches: [main]
+    paths:
+      - "modules/api/**"
+      - "modules/core/**"
+      - ".github/workflows/api-tests.yml"
+      - "package.json"
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      region:
+        description: "Region to run against"
+        type: choice
+        required: true
+        default: "us"
+        options: [us, eu, uk, all]
+  schedule:
+    # 03:30 UTC daily - schema drift in production-like demos surfaces here.
+    - cron: "30 3 * * *"
+
+jobs:
+  api:
+    name: api / ${{ matrix.region }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        region: ${{ fromJSON(github.event_name == 'workflow_dispatch' && (github.event.inputs.region == 'all' && '["us","eu","uk"]' || format('["{0}"]', github.event.inputs.region)) || '["us","eu","uk"]') }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build TypeScript project references
+        run: npm run build
+
+      - name: Run API tests
+        env:
+          REGION: ${{ matrix.region }}
+          CI: "true"
+        run: npm run test:api
+
+      - name: Upload Playwright report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: api-report-${{ matrix.region }}
+          path: modules/api/playwright-report
+          retention-days: 14
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: api-junit-${{ matrix.region }}
+          path: modules/api/test-results
+          retention-days: 14

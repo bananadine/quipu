@@ -1,0 +1,16 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "rootDir": ".",
+    "outDir": "dist",
+    "tsBuildInfoFile": "./dist/.tsbuildinfo",
+    "types": ["node"],
+    "baseUrl": ".",
+    "paths": {
+      "@quipu/core": ["../core/src/index.ts"],
+      "@quipu/api": ["../api/src/index.ts"]
+    }
+  },
+  "include": ["src/**/*", "tests/**/*", "playwright.config.ts"],
+  "references": [{ "path": "../core" }, { "path": "../api" }]
+}

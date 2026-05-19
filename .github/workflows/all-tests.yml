@@ -1,0 +1,103 @@
+name: All Tests (API + Web)
+
+# Runs both layers in sequence (API first - faster feedback if backend is sick,
+# and we don't want to spin up browsers just to discover the API is down).
+#
+# Both layers are still independently runnable from their own workflows; this
+# one is the "ship gate" for end-to-end coverage.
+on:
+  workflow_dispatch:
+    inputs:
+      region:
+        description: "Region to run against"
+        type: choice
+        required: true
+        default: "us"
+        options: [us, eu, uk, all]
+  schedule:
+    # 02:00 UTC daily - a full cross-region health check.
+    - cron: "0 2 * * *"
+
+jobs:
+  matrix-setup:
+    name: Build region matrix
+    runs-on: ubuntu-latest
+    outputs:
+      regions: ${{ steps.set.outputs.regions }}
+    steps:
+      - id: set
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ] && [ "${{ github.event.inputs.region }}" != "all" ]; then
+            echo 'regions=["${{ github.event.inputs.region }}"]' >> "$GITHUB_OUTPUT"
+          else
+            echo 'regions=["us","eu","uk"]' >> "$GITHUB_OUTPUT"
+          fi
+
+  api:
+    needs: matrix-setup
+    name: api / ${{ matrix.region }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        region: ${{ fromJSON(needs.matrix-setup.outputs.regions) }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - run: npm run build
+      - name: Run API tests
+        env:
+          REGION: ${{ matrix.region }}
+          CI: "true"
+        run: npm run test:api
+      - if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: all-api-report-${{ matrix.region }}
+          path: modules/api/playwright-report
+          retention-days: 14
+      - if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: all-api-junit-${{ matrix.region }}
+          path: modules/api/test-results
+          retention-days: 14
+
+  web:
+    needs: [matrix-setup, api]
+    name: web / ${{ matrix.region }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        region: ${{ fromJSON(needs.matrix-setup.outputs.regions) }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - run: npm run build
+      - run: npx playwright install --with-deps chromium
+      - name: Run Web tests
+        env:
+          REGION: ${{ matrix.region }}
+          CI: "true"
+        run: npm run test:web
+      - if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: all-web-report-${{ matrix.region }}
+          path: modules/web/playwright-report
+          retention-days: 14
+      - if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: all-web-junit-${{ matrix.region }}
+          path: modules/web/test-results
+          retention-days: 14

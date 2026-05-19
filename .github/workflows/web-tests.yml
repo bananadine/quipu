@@ -1,0 +1,68 @@
+name: Web Tests
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "modules/web/**"
+      - "modules/api/**"
+      - "modules/core/**"
+      - ".github/workflows/web-tests.yml"
+      - "package.json"
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      region:
+        description: "Region to run against"
+        type: choice
+        required: true
+        default: "us"
+        options: [us, eu, uk, all]
+
+jobs:
+  web:
+    name: web / ${{ matrix.region }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        region: ${{ fromJSON(github.event_name == 'workflow_dispatch' && (github.event.inputs.region == 'all' && '["us","eu","uk"]' || format('["{0}"]', github.event.inputs.region)) || '["us","eu","uk"]') }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build TypeScript project references
+        run: npm run build
+
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps chromium
+
+      - name: Run Web tests
+        env:
+          REGION: ${{ matrix.region }}
+          CI: "true"
+        run: npm run test:web
+
+      - name: Upload Playwright report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: web-report-${{ matrix.region }}
+          path: modules/web/playwright-report
+          retention-days: 14
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: web-junit-${{ matrix.region }}
+          path: modules/web/test-results
+          retention-days: 14

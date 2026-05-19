@@ -1,0 +1,29 @@
+{
+  "name": "quipu-framework",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Multi-region Playwright + TypeScript test framework for API and Web layers",
+  "workspaces": [
+    "modules/*"
+  ],
+  "scripts": {
+    "build": "tsc -b",
+    "typecheck": "tsc -b --noEmit",
+    "pretest:api": "tsc -b",
+    "test:api": "npm run test --workspace @quipu/api",
+    "pretest:web": "tsc -b",
+    "test:web": "npm run test --workspace @quipu/web",
+    "test:all": "npm run test:api && npm run test:web",
+    "install:browsers": "npx playwright install --with-deps chromium",
+    "lint": "tsc -b --noEmit"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.48.0",
+    "@types/node": "^22.7.5",
+    "typescript": "^5.6.3",
+    "zod": "^3.23.8"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  }
+}
